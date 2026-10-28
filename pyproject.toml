@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "congen2"
+version = "0.1.0"
+description = "A faithful Python/pyglet port of Congeneration 2"
+requires-python = ">=3.11"
+dependencies = ["pyglet>=2.1"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["congen2"]
+
+[project.scripts]
+congen2 = "congen2.app:main"
