@@ -123,7 +123,10 @@ class App(pyglet.window.Window):
         tilemap = load_cmp(str(cmp_path))
         events = load_dat(str(dat_path))
         player = self._carry_player(carry) if carry is not None else Player()
-        self.world = World(tilemap, events, events.boss_health, player)
+        fire_chance = C.FIRE_CHANCES.get(self.cfg.difficulty,
+                                         C.ENEMY_FIRE_CHANCE)
+        self.world = World(tilemap, events, events.boss_health, player,
+                           fire_chance=fire_chance)
         self.state = LEVEL
         self.paused = False
         self.controls_mode = False
@@ -294,10 +297,20 @@ class App(pyglet.window.Window):
             return
 
         if key.UP in edges:
-            self.pause_cursor = (self.pause_cursor - 1) % 5
+            self.pause_cursor = (self.pause_cursor - 1) % 6
         elif key.DOWN in edges:
-            self.pause_cursor = (self.pause_cursor + 1) % 5
-        elif key.ENTER in edges or key.LEFT in edges or key.RIGHT in edges:
+            self.pause_cursor = (self.pause_cursor + 1) % 6
+        elif key.LEFT in edges:
+            if self.pause_cursor == 3:
+                self._cycle_difficulty(-1)
+            else:
+                self._activate_pause()
+        elif key.RIGHT in edges:
+            if self.pause_cursor == 3:
+                self._cycle_difficulty(1)
+            else:
+                self._activate_pause()
+        elif key.ENTER in edges:
             self._activate_pause()
 
     def _activate_pause(self) -> None:
@@ -308,10 +321,23 @@ class App(pyglet.window.Window):
         elif self.pause_cursor == 2:
             self._toggle_sfx()
         elif self.pause_cursor == 3:
+            self._cycle_difficulty(1)
+        elif self.pause_cursor == 4:
             self.controls_mode = True
             self.controls_cursor = 0
         else:
             self._abandon_level()
+
+    def _cycle_difficulty(self, delta: int) -> None:
+        order = list(C.DIFFICULTY_ORDER)
+        try:
+            i = order.index(self.cfg.difficulty)
+        except ValueError:
+            i = order.index("normal")
+        self.cfg.difficulty = order[(i + delta) % len(order)]
+        self.cfg.save()
+        if self.world is not None:
+            self.world.fire_chance = C.FIRE_CHANCES[self.cfg.difficulty]
 
     def _step_controls(self, edges: set[int]) -> None:
         actions = list(self.cfg.bindings.keys())

@@ -87,7 +87,9 @@ Kind 6 initial `Userflag`: 192 if left, else 64.
 
 ### Generic enemy fire
 Every tick, for each living enemy (`1 ≤ Kind ≤ 15`) with a free shot slot,
-1-in-40 chance to fire an `EShot` aimed at the player:
+1-in-40 chance to fire an `EShot` aimed at the player (this is the faithful
+**HARD** rate; the NORMAL/EASY difficulty settings lengthen the divisor to
+1/60 and 1/100 respectively — see `07-enhancements.md`):
 - Designate dominant axis; speed 3 on it, proportional on the other;
 - angle = `DQBangle(player, enemy)`; rotation applied at render;
 - damage 15 on hit; despawn outside `x∈[-11,321]`, `y∈[-9,201]`.

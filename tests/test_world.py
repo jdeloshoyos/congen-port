@@ -150,5 +150,46 @@ class CarryOverTests(unittest.TestCase):
         self.assertEqual(w.player.ammo, 7)
 
 
+class DebrisResetTests(unittest.TestCase):
+    def test_reset_syncs_interpolation_anchors(self):
+        # Regression: a reset debris must not lerp from its old on-screen
+        # position (which produced stray explosion frames).
+        w = make_world()
+        d = w.debris[0]
+        d.x, d.y, d.px, d.py, d.userflag = 100.0, 50.0, 100.0, 50.0, 17
+        w._reset_debris(d)
+        self.assertEqual((d.x, d.y, d.px, d.py, d.userflag),
+                         (-33.0, 100.0, -33.0, 100.0, 0))
+
+
+class DifficultyTests(unittest.TestCase):
+    def test_default_is_faithful_hard_value(self):
+        w = make_world()
+        self.assertEqual(w.fire_chance, C.ENEMY_FIRE_CHANCE)
+
+    def test_chance_one_always_fires(self):
+        w = make_world()
+        e = w.enemies[0]
+        e.kind = 1
+        e.x, e.y = 160.0, 100.0
+        e.vel_x = e.vel_y = 0.0
+        e.health = 1
+        w.fire_chance = 1
+        w.tick(Controls())
+        self.assertTrue(any(s.x != -10 for s in w.eshots))
+
+    def test_huge_chance_never_fires(self):
+        w = make_world()
+        e = w.enemies[0]
+        e.kind = 1
+        e.x, e.y = 160.0, 100.0
+        e.vel_x = e.vel_y = 0.0
+        e.health = 1
+        w.fire_chance = 10 ** 9
+        for _ in range(50):
+            w.tick(Controls())
+        self.assertFalse(any(s.x != -10 for s in w.eshots))
+
+
 if __name__ == "__main__":
     unittest.main()

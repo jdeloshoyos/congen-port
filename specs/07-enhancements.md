@@ -41,18 +41,29 @@ the simulation and offers:
 - Resume
 - Music on/off
 - SFX on/off
+- Difficulty (FACIL / NORMAL / DIFICIL)
 - Controls remap
 - Quit to menu
 
-## 6. Persistence
+## 6. Difficulty
+
+- Three settings, selected in the pause menu (←/→) and persisted:
+  - **HARD** — enemy fire chance 1/40 per tick (the original, faithful rate).
+  - **NORMAL** (default) — 1/60 per tick.
+  - **EASY** — 1/100 per tick.
+- Only the enemies' shooting frequency changes; movement, health, damage,
+  spawns and scoring are untouched.
+- Changing it mid-level takes effect immediately.
+
+## 7. Persistence
 
 - Original save semantics (`maxscore`, `maxlevelreached`) are preserved in
   `savegame.dat` for compatibility.
-- User preferences (music, SFX, controls, window mode) live in a separate
-  config file (`config.json` under a user-config directory) so the original
-  save file format is untouched.
+- User preferences (music, SFX, difficulty, controls, window mode) live in a
+  separate config file (`config.json` under a user-config directory) so the
+  original save file format is untouched.
 
-## 7. Explicit non-enhancements
+## 8. Explicit non-enhancements
 
 To keep the port faithful, the following are *not* changed:
 

@@ -56,6 +56,7 @@ class Config:
     sfx_volume: float = 0.7
     fullscreen: bool = False
     scale: int = 3
+    difficulty: str = "normal"
     bindings: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_BINDINGS))
 
     # ---------------------------------------------------------------

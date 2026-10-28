@@ -367,9 +367,10 @@ class Renderer:
 
     def _draw_powerup(self, texname: str, e, x: float, y: float) -> None:
         u = max(25, min(40, e.userflag))
-        off = u / 2 - 16
+        # Centre-anchored scaling already reproduces the original's fixed-centre
+        # pulse, so no top-left compensation offset is applied here.
         scale = u / 32.0
-        self.sprite(L_ENEMY, texname, x - off, y - off, scale=scale)
+        self.sprite(L_ENEMY, texname, x, y, scale=scale)
 
     def _draw_hud(self, world) -> None:
         p = world.player
@@ -437,6 +438,7 @@ class Renderer:
             "Continuar",
             f"Musica: {'SI' if cfg.music_on else 'NO'}",
             f"Sonido: {'SI' if cfg.sfx_on else 'NO'}",
+            "Dificultad: " + C.DIFFICULTY_LABELS.get(cfg.difficulty, "NORMAL"),
             "Controles",
             "Salir al menu",
         ]

@@ -132,10 +132,12 @@ class World:
     """One level's worth of simulation state."""
 
     def __init__(self, tilemap: TileMap, events: EventFile, boss_health: int,
-                 player: Optional[Player] = None):
+                 player: Optional[Player] = None,
+                 fire_chance: int = C.ENEMY_FIRE_CHANCE):
         self.tilemap = tilemap
         self.events = events
         self.boss_health = boss_health
+        self.fire_chance = fire_chance
 
         # Carry-over state is supplied when moving to the next level.
         self.player = player if player is not None else Player()
@@ -404,6 +406,10 @@ class World:
 
     def _reset_debris(self, d: Debris) -> None:
         d.x, d.y = -33.0, 100.0
+        # Keep the interpolation anchors in sync: otherwise a just-reset
+        # debris is rendered at lerp(old_position, -33) for one tick, which
+        # shows a stray explosion frame at a bogus on-screen position.
+        d.px, d.py = -33.0, 100.0
         d.vel_x = d.vel_y = 0.0
         d.userflag = 0
 
@@ -638,7 +644,7 @@ class World:
     def _enemy_fire(self, t: int, e: Enemy) -> None:
         if not (0 < e.kind < 16):
             return
-        if random.randrange(C.ENEMY_FIRE_CHANCE) != 0:
+        if random.randrange(self.fire_chance) != 0:
             return
         slot = self.eshots[self.cureshot]
         if slot.x != -10:

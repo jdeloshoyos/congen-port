@@ -57,9 +57,14 @@ GUN_SOUNDS = (1, 7, 8)
 # ---------------------------------------------------------------------------
 # Enemies
 # ---------------------------------------------------------------------------
-ENEMY_FIRE_CHANCE = 40          # INT(RND*40)==0 -> 1/40 per tick
+ENEMY_FIRE_CHANCE = 40          # INT(RND*40)==0 -> 1/40 per tick (HARD)
 ENEMY_SHOT_SPEED = 3.0
 ENEMY_SHOT_DAMAGE = 15
+
+# Difficulty -> enemy fire chance (higher value == rarer shots).
+FIRE_CHANCES = {"hard": 40, "normal": 60, "easy": 100}
+DIFFICULTY_ORDER = ("easy", "normal", "hard")
+DIFFICULTY_LABELS = {"easy": "FACIL", "normal": "NORMAL", "hard": "DIFICIL"}
 ENEMY_CONTACT_DAMAGE = 30
 ENEMY_CONTACT_SELF_DAMAGE = 5
 

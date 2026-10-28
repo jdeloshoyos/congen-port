@@ -15,6 +15,7 @@ import pyglet  # noqa: E402
 from pyglet.window import key  # noqa: E402
 
 from congen2.app import App, CREDITS, LEVEL, MENU  # noqa: E402
+from congen2 import constants as C  # noqa: E402
 
 
 def press(app, sym):
@@ -50,9 +51,15 @@ press(app, key.DOWN)                 # Musica
 old_music = app.cfg.music_on
 press(app, key.ENTER)
 assert app.cfg.music_on != old_music
-press(app, key.DOWN)                 # Sonido
-press(app, key.DOWN)                 # Controles
+press(app, key.DOWN)                 # Sonido (2)
+press(app, key.DOWN)                 # Dificultad (3)
 assert app.pause_cursor == 3
+old_diff = app.cfg.difficulty
+press(app, key.RIGHT)                # cycle difficulty
+assert app.cfg.difficulty != old_diff, app.cfg.difficulty
+assert app.world.fire_chance == C.FIRE_CHANCES[app.cfg.difficulty]
+press(app, key.DOWN)                 # Controles (4)
+assert app.pause_cursor == 4
 press(app, key.ENTER)
 assert app.controls_mode
 press(app, key.ENTER)                # start rebinding first action

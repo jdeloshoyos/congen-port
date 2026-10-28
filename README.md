@@ -67,6 +67,8 @@ All gameplay keys are remappable from **Pause → Controles**; bindings persist.
 - **Optional background music** (`CANCION1.WAV`, unused in the original) with
   an on/off toggle.
 - SFX on/off, configurable controls, and a proper pause menu.
+- **Difficulty setting** (FACIL / NORMAL / DIFICIL, default NORMAL) in the pause
+  menu, controlling how often enemies shoot (HARD = the original rate).
 - Original save data (`maxscore`, `maxlevelreached`) is preserved but written to
   a per-user directory — **`legacy_app/` is never modified**.
 
