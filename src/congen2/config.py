@@ -113,10 +113,14 @@ def data_dir() -> Path:
     if override:
         return Path(override)
     here = Path(__file__).resolve()
-    candidates = [
-        Path.cwd() / "legacy_app" / "Cg2data",
-        here.parents[2] / "legacy_app" / "Cg2data",   # repo layout
-        here.parents[1] / "data" / "Cg2data",          # bundled layout
+    candidates: list[Path] = []
+    # PyInstaller (onefile/onedir) extracts bundled data under _MEIPASS.
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidates.append(Path(meipass) / "data")
+    candidates += [
+        Path.cwd() / "data",          # running from the repo root
+        here.parents[2] / "data",     # repo layout (project root / data)
     ]
     for c in candidates:
         if c.is_dir():

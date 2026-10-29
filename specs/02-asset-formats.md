@@ -1,68 +1,62 @@
 # Asset & Data Formats
 
-All files live in `legacy_app/Cg2data/` and are read-only. This document
-specifies the exact byte formats and the derived in-memory models.
+Runtime assets live in the top-level **`data/`** folder; **`legacy_app/Cg2data/`**
+remains the untouched reference. This document specifies the runtime formats
+and the derived in-memory models.
 
 ## 1. Palette & colour model
 
-- 256-colour VGA palette, **768 bytes = 256 × (R,G,B)**.
-- The palette is embedded in every PCX (trailing 768 bytes). The original loads
-  `nave.pcx` first and keeps that palette; all art in the pack shares the same
-  palette. **We extract the palette from `nave.pcx` and apply it globally.**
-- **Colour index 0 is transparent** for all sprite blits (`DQBput`, mirrored,
-  rotated, scaled, and transparent layer copies).
-- Colour 245 is the after-image/silhouette tint used by `DQBhPut`.
+- 256-colour VGA palette, **768 bytes = 256 × (R,G,B)**, stored as
+  **`data/palette.pal`** (extracted verbatim from `nave.pcx`).
+- Graphics are **true-colour RGBA PNG**; their colours are baked in at
+  conversion time from this palette. The palette itself is now used only for
+  tinting the HUD/menu text and the ship's after-image.
+- **Colour index 0 is transparent** in the original; in the PNG art this becomes
+  **alpha 0** (fully transparent) at conversion time.
+- Colour 245 is the after-image/silhouette tint (`#0E0E0E`), applied to the
+  white mask `nave_sil.png`.
 
-## 2. PCX images (8-bit, single plane)
+## 2. PNG images (RGBA)
 
-Header (128 bytes), little-endian fields we use:
+- True-colour + alpha, 8-bit, colour type 6 (no palette chunk).
+- Converted from the original 8-bit PCX art: each pixel's palette entry is
+  written as RGB, and index 0 → alpha 0. No re-quantization; pixels are
+  byte-identical to the original palette.
+- Loaded at runtime with `pyglet.image.load`, sliced with `get_region`
+  (note: pyglet's `get_region` uses a bottom-up `y` origin, so sheet rows are
+  inverted when cropping).
+- The original PCX format is retained only for the one-time converter
+  (`tools/convert_assets.py`) and read by `dataformats.decode_pcx`.
 
-| Offset | Field |
-|---|---|
-| 0 | manufacturer `0x0A` |
-| 2 | encoding: `1` = RLE |
-| 3 | bits per pixel (`8`) |
-| 4,6,8,10 | xmin, ymin, xmax, ymax (words) |
-| 65 | number of planes (`1`) |
-| 66 | bytes per line (word, per plane) |
+## 3. Sprite atlas layout
 
-- Width = `xmax - xmin + 1`; Height = `ymax - ymin + 1`.
-- Pixel stream is **RLE**: a byte `b` with `(b & 0xC0) == 0xC0` introduces a run
-  of `b & 0x3F` copies of the next byte; otherwise `b` is a literal pixel.
-- Each scanline occupies `bytes_per_line` bytes (may include padding beyond
-  `width`); padding is discarded.
-- If the last 769 bytes begin with `0x0C`, the following 768 bytes are the
-  palette.
-
-## 3. Sprite atlas layout (original)
-
-The original loads all PCX images onto one 320-wide layer at fixed offsets and
-slices 32 × 32 (or 8 × 8) regions with `DQBget`. We instead slice each source
-PCX directly into frames. Frame counts:
+Frame counts and roles are unchanged from the original; files are simply
+`.png`:
 
 | Source | Frame size | Frames | Role |
 |---|---|---|---|
-| `nave.pcx` | 32×32 | 1 | ship idle |
-| `nave2.pcx` | 32×32 | 1 | ship engine |
-| `nave3.pcx` | 32×32 | 1 | ship banking |
-| `disparo.pcx` | 32×32 | 1 | gun level 1 |
-| `disparo2.pcx` | 32×32 | 1 | gun level 2 |
-| `disparo3.pcx` | 32×32 | 1 | gun level 3 |
-| `powerup.pcx` | 32×32 | 1 | "P" upgrade |
-| `salud.pcx` | 32×32 | 1 | "H" health |
-| `misil.pcx` | 32×32 | 1 | missile |
-| `Misilbox.pcx` | 32×32 | 1 | "M" missile box |
-| `explo.pcx` | 32×32 | 6 | explosion frames 0–5 |
-| `hit.pcx` | 32×32 | 2 | impact frames 6–7 |
-| `debris.pcx` | 8×8 | 8 | debris/particle + enemy bullet |
-| `malo1.pcx` | 32×32 | 2 | enemy kind 1 |
-| `malo2.pcx` | 32×32 | 3 | enemy kind 2 |
-| `malo3.pcx` | 32×32 | 2 | enemy kind 3 |
-| `mina.pcx` | 32×32 | 1 | enemy kind 5 |
-| `malo4.pcx` | 32×32 | 2 | enemy kind 6 |
-| `malo5.pcx` | 32×32 | 1 | enemy kind 7 |
-| `boss{1,2}.pcx` | 32×32 | 6 (3×2) | boss alive sections |
-| `boss{1,2}wk.pcx` | 32×32 | 6 (3×2) | boss destroyed sections |
+| `nave.png` | 32×32 | 1 | ship idle |
+| `nave2.png` | 32×32 | 1 | ship engine |
+| `nave3.png` | 32×32 | 1 | ship banking |
+| `nave_sil.png` | 32×32 | 1 | ship silhouette (white mask) |
+| `disparo.png` | 32×32 | 1 | gun level 1 |
+| `disparo2.png` | 32×32 | 1 | gun level 2 |
+| `disparo3.png` | 32×32 | 1 | gun level 3 |
+| `powerup.png` | 32×32 | 1 | "P" upgrade |
+| `salud.png` | 32×32 | 1 | "H" health |
+| `Misil.png` | 32×32 | 1 | missile |
+| `Misilbox.png` | 32×32 | 1 | "M" missile box |
+| `explo.png` | 32×32 | 6 | explosion frames 0–5 |
+| `hit.png` | 32×32 | 2 | impact frames 6–7 |
+| `debris.png` | 8×8 | 8 | debris/particle + enemy bullet |
+| `malo1.png` | 32×32 | 2 | enemy kind 1 |
+| `malo2.png` | 32×32 | 3 | enemy kind 2 |
+| `malo3.png` | 32×32 | 2 | enemy kind 3 |
+| `mina.png` | 32×32 | 1 | enemy kind 5 |
+| `malo4.png` | 32×32 | 2 | enemy kind 6 |
+| `malo5.png` | 32×32 | 1 | enemy kind 7 |
+| `boss{1,2}.png` | 32×32 | 6 (3×2) | boss alive sections |
+| `boss{1,2}wk.png` | 32×32 | 6 (3×2) | boss destroyed sections |
 
 Enemy kind 4 reuses `malo1` mirrored vertically. Kind 100/101/102 reuse the
 powerup/salud/misilbox images with a pulsing scale.
@@ -70,15 +64,16 @@ powerup/salud/misilbox images with a pulsing scale.
 ## 4. Map files (`.CMP`)
 
 ```
-offset 0   : 12-byte ASCII tileset filename, e.g. "tileset1.pcx" (padded)
+offset 0   : 12-byte ASCII tileset filename, e.g. "tileset1.png" (padded)
 offset 12  : 4000 bytes of tile indices, stored x-fastest:
              for y in 1..400: for x in 1..10: byte = tile_index + 35
 ```
 
 - Grid = **10 wide (x) × 400 tall (y)**, each cell one tile.
 - `tile_index = byte - 35`, range 0–19.
-- Tileset = **320×64 PCX = 2 rows × 10 columns of 32×32 tiles** (20 tiles).
-- Map 1 uses `tileset1.pcx`, map 2 uses `tileset2.pcx`.
+- Tileset = **320×64 PNG = 2 rows × 10 columns of 32×32 tiles** (20 tiles).
+- Map 1 uses `tileset1.png`, map 2 uses `tileset2.png` (the converter rewrites
+  the name embedded in the copied `.cmp`).
 
 ## 5. Event files (`.DAT`)
 
@@ -109,8 +104,8 @@ data.
 - Each glyph is **8×8 monochrome, MSB = leftmost pixel**, 8 rows per glyph.
 - Glyph index equals the character code (ASCII/CP437). All text used by the
   game is ASCII 32–126.
-- Rendered as white-on-transparent glyphs in a 16×16 atlas, tinted per text
-  colour at draw time.
+- Rendered as white-on-transparent glyph textures, tinted per text colour
+  (via `palette.pal`) at draw time.
 
 ## 7. Sounds (`.WAV`)
 
@@ -124,6 +119,6 @@ data.
 
 ## 8. Save game (`savegame.dat`)
 
-Two ASCII lines: `maxscore`, `maxlevelreached`. Read at boot, rewritten on
-quit / level completion. The port stores this plus user settings separately
-(see `07-enhancements.md`), while keeping the original save semantics.
+Two ASCII lines: `maxscore`, `maxlevelreached`. Not shipped in `data/`; the
+port writes it to a per-user directory (see `07-enhancements.md`), keeping the
+original save semantics.

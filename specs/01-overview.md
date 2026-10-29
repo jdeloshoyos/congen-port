@@ -16,9 +16,11 @@ opt-in quality-of-life improvements.
 - `legacy_app/Readme.txt` — controls and background.
 - `legacy_app/Shot1.jpg` … `Shot4.jpg` — visual reference screenshots.
 
-**The `legacy_app/` tree must never be modified.** All derived assets are read
-from it at runtime (or converted into an in-memory form); nothing is written
-back.
+**The `legacy_app/` tree must never be modified.** It is the reference; the
+ported app reads its own assets from the top-level **`data/`** folder, which is
+generated losslessly from `legacy_app/Cg2data/` by `tools/convert_assets.py`
+(PCX → RGBA PNG; audio/font/maps/events copied). Nothing is written back to
+`legacy_app/`.
 
 ## 3. Target stack
 
@@ -27,7 +29,7 @@ back.
 | Language | Python 3.15 |
 | Windowing / GPU | pyglet 2.1 (OpenGL) |
 | Audio | pyglet.media (WAV) |
-| Asset decode | Built-in pure-Python PCX + FNT decoders |
+| Asset decode | pyglet (PNG) + pure-Python FNT/CMP/DAT decoders |
 | Tests | Python `unittest` (headless; no display required) |
 
 ## 4. Resolution & timing
@@ -46,7 +48,9 @@ back.
 ```
 src/congen2/
   constants.py     All tuning values (named, documented).
-  dataformats.py   Pure decoders: PCX, FNT, CMP, DAT, savegame. No pyglet.
+  dataformats.py   Pure decoders: FNT, CMP, DAT, savegame (+ PCX for the
+                   converter). No pyglet.
+  png.py           Pure-Python RGBA PNG encode/decode (converter + tests).
   world.py         Deterministic simulation: player, enemies, shots,
                    missiles, debris pool, map scroll, events, collisions.
   events.py        Event scheduling model (parsed from .DAT).
@@ -69,9 +73,11 @@ Python and fully testable without a display. Rendering and input live only in
 
 1. **Behaviour first.** Gameplay logic, AI, spawn tables, collisions, scoring
    and state transitions mirror the original.
-2. **Assets unchanged.** Original PCX/WAV/FNT/CMP/DAT files are consumed as-is.
-3. **Palette-faithful.** One shared 256-colour palette is extracted from the
-   original art and applied to every image.
+2. **Assets losslessly converted.** The original PCX art is converted to
+   true-colour RGBA PNG (byte-identical pixels; WAV/FNT/CMP/DAT copied as-is).
+3. **Palette-faithful.** The original 256-colour palette is preserved in
+   `palette.pal` (colours are baked into the PNGs, and the palette still drives
+   text/after-image tinting).
 4. **Timing-faithful.** 50 Hz simulation; no speed rescaling.
 5. **Additive QoL only.** Enhancements are opt-in and never alter core
    behaviour (see `07-enhancements.md`).

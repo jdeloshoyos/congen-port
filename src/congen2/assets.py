@@ -1,4 +1,8 @@
-"""Asset loading: PCX -> textures, FNT -> glyph textures, WAV -> sources.
+"""Asset loading: PNG -> textures, FNT -> glyph textures, WAV -> sources.
+
+Graphics are true-colour RGBA PNGs (converted from the original PCX art; index
+0 is transparent).  The original 256-colour palette is kept in ``palette.pal``
+and used only for tinting the HUD/menu text and the ship's after-image.
 
 Must be constructed *after* a pyglet window/GL context exists.
 """
@@ -33,33 +37,6 @@ SOUND_FILES = {
 MUSIC_FILE = "CANCION1.WAV"
 
 
-def _rgba(img: df.Image, x: int, y: int, w: int, h: int,
-          silhouette: bool = False) -> bytes:
-    """Crop (top-left based) and convert to RGBA, flipping vertically because
-    pyglet's ImageData treats the first row as the bottom of the texture."""
-    pal = img.palette
-    out = bytearray(w * h * 4)
-    for row in range(h):
-        src_y = y + row
-        dst_row = h - 1 - row
-        base = dst_row * w * 4
-        for col in range(w):
-            idx = img.indices[src_y * img.width + x + col]
-            j = base + col * 4
-            if idx == 0:
-                # alpha stays 0
-                continue
-            if silhouette:
-                out[j] = out[j + 1] = out[j + 2] = 255
-            else:
-                p = idx * 3
-                out[j] = pal[p]
-                out[j + 1] = pal[p + 1]
-                out[j + 2] = pal[p + 2]
-            out[j + 3] = 255
-    return bytes(out)
-
-
 class Assets:
     def __init__(self, directory: Path | None = None):
         self.dir = Path(directory) if directory else data_dir()
@@ -68,14 +45,12 @@ class Assets:
                 f"CG2 data directory not found: {self.dir}\n"
                 f"Run from the project root or pass --data <path>."
             )
-        self.images: dict[str, df.Image] = {}
         self.textures: dict[str, pyglet.image.Texture] = {}
-        self._image_data: list[pyglet.image.ImageData] = []   # keep alive
         self._glyph_tex: dict[int, pyglet.image.Texture] = {}
         self.sounds: dict[int, pyglet.media.Source] = {}
         self.music: pyglet.media.Source | None = None
 
-        self.palette = df.load_pcx(str(self.dir / "nave.pcx")).palette
+        self.palette = (self.dir / "palette.pal").read_bytes()
         self.font = df.load_fnt(str(self.dir / "HITECH.FNT"))
         self._load_sprites()
         self._load_tilesets()
@@ -90,86 +65,74 @@ class Assets:
 
     # -- texture helpers -------------------------------------------------
 
-    def _make_tex(self, w: int, h: int, data: bytes) -> pyglet.image.Texture:
-        im = pyglet.image.ImageData(w, h, "RGBA", data, pitch=w * 4)
-        self._image_data.append(im)
-        tex = im.get_texture()
+    def _finalize(self, img: pyglet.image.AbstractImage) -> pyglet.image.Texture:
+        tex = img.get_texture()
         tex.min_filter = gl.GL_NEAREST
         tex.mag_filter = gl.GL_NEAREST
-        # Sprites are positioned by their centre so rotation/mirroring match
-        # DirectQB's centre-anchored puts.
-        tex.anchor_x = w // 2
-        tex.anchor_y = h // 2
+        tex.anchor_x = img.width // 2
+        tex.anchor_y = img.height // 2
         return tex
 
     def _add_sheet(self, key: str, filename: str, *, frame_w: int,
-                   frame_h: int, cols: int, rows: int = 1,
-                   silhouette: bool = False) -> list[str]:
-        img = df.load_pcx(str(self.dir / filename))
-        self.images[key] = img
+                   frame_h: int, cols: int, rows: int = 1) -> list[str]:
+        img = pyglet.image.load(str(self.dir / filename))
         names: list[str] = []
         for r in range(rows):
+            # pyglet's get_region uses a bottom-up y origin, so invert the row.
+            src_y = (rows - 1 - r) * frame_h
             for c in range(cols):
                 name = f"{key}_{r * cols + c}" if rows * cols > 1 else key
-                data = _rgba(img, c * frame_w, r * frame_h, frame_w, frame_h,
-                             silhouette=silhouette)
-                self.textures[name] = self._make_tex(frame_w, frame_h, data)
+                region = img.get_region(c * frame_w, src_y, frame_w, frame_h)
+                self.textures[name] = self._finalize(region)
                 names.append(name)
         return names
 
-    def _add_full(self, key: str, filename: str, silhouette: bool = False) -> None:
-        img = df.load_pcx(str(self.dir / filename))
-        self.images[key] = img
-        data = _rgba(img, 0, 0, img.width, img.height, silhouette=silhouette)
-        self.textures[key] = self._make_tex(img.width, img.height, data)
+    def _add_full(self, key: str, filename: str) -> None:
+        img = pyglet.image.load(str(self.dir / filename))
+        self.textures[key] = self._finalize(img)
 
     # -- sprite sheets ---------------------------------------------------
 
     def _load_sprites(self) -> None:
-        self._add_sheet("ship0", "nave.pcx", frame_w=32, frame_h=32, cols=1)
-        self._add_sheet("ship1", "nave2.pcx", frame_w=32, frame_h=32, cols=1)
-        self._add_sheet("ship2", "nave3.pcx", frame_w=32, frame_h=32, cols=1)
-        for i, f in enumerate(("disparo.pcx", "disparo2.pcx", "disparo3.pcx")):
+        self._add_sheet("ship0", "nave.png", frame_w=32, frame_h=32, cols=1)
+        self._add_sheet("ship1", "nave2.png", frame_w=32, frame_h=32, cols=1)
+        self._add_sheet("ship2", "nave3.png", frame_w=32, frame_h=32, cols=1)
+        self._add_full("ship0_sil", "nave_sil.png")
+        for i, f in enumerate(("disparo.png", "disparo2.png", "disparo3.png")):
             self._add_sheet(f"shot{i}", f, frame_w=32, frame_h=32, cols=1)
-        self._add_sheet("powerup", "powerup.pcx", frame_w=32, frame_h=32, cols=1)
-        self._add_sheet("health", "salud.pcx", frame_w=32, frame_h=32, cols=1)
-        self._add_sheet("missilebox", "Misilbox.pcx", frame_w=32, frame_h=32, cols=1)
-        self._add_sheet("missile", "Misil.pcx", frame_w=32, frame_h=32, cols=1)
+        self._add_sheet("powerup", "powerup.png", frame_w=32, frame_h=32, cols=1)
+        self._add_sheet("health", "salud.png", frame_w=32, frame_h=32, cols=1)
+        self._add_sheet("missilebox", "Misilbox.png", frame_w=32, frame_h=32, cols=1)
+        self._add_sheet("missile", "Misil.png", frame_w=32, frame_h=32, cols=1)
 
-        # Silhouettes for the after-image effect (3 ship frames).
-        for i, f in enumerate(("nave.pcx", "nave2.pcx", "nave3.pcx")):
-            img = df.load_pcx(str(self.dir / f))
-            data = _rgba(img, 0, 0, 32, 32, silhouette=True)
-            self.textures[f"ship{i}_sil"] = self._make_tex(32, 32, data)
+        self._add_sheet("expl", "explo.png", frame_w=32, frame_h=32, cols=6)
+        self._add_sheet("hit", "hit.png", frame_w=32, frame_h=32, cols=2)
+        self._add_sheet("debris", "debris.png", frame_w=8, frame_h=8, cols=8)
 
-        self._add_sheet("expl", "explo.pcx", frame_w=32, frame_h=32, cols=6)
-        self._add_sheet("hit", "hit.pcx", frame_w=32, frame_h=32, cols=2)
-        self._add_sheet("debris", "debris.pcx", frame_w=8, frame_h=8, cols=8)
-
-        self._add_sheet("malo1", "malo1.pcx", frame_w=32, frame_h=32, cols=2)
-        self._add_sheet("malo2", "malo2.pcx", frame_w=32, frame_h=32, cols=3)
-        self._add_sheet("malo3", "malo3.pcx", frame_w=32, frame_h=32, cols=2)
-        self._add_sheet("mina", "mina.pcx", frame_w=32, frame_h=32, cols=1)
-        self._add_sheet("malo4", "malo4.pcx", frame_w=32, frame_h=32, cols=2)
-        self._add_sheet("malo5", "malo5.pcx", frame_w=32, frame_h=32, cols=1)
+        self._add_sheet("malo1", "malo1.png", frame_w=32, frame_h=32, cols=2)
+        self._add_sheet("malo2", "malo2.png", frame_w=32, frame_h=32, cols=3)
+        self._add_sheet("malo3", "malo3.png", frame_w=32, frame_h=32, cols=2)
+        self._add_sheet("mina", "mina.png", frame_w=32, frame_h=32, cols=1)
+        self._add_sheet("malo4", "malo4.png", frame_w=32, frame_h=32, cols=2)
+        self._add_sheet("malo5", "malo5.png", frame_w=32, frame_h=32, cols=1)
 
         for n in (1, 2):
-            self._add_sheet(f"bossA{n}", f"boss{n}.pcx", frame_w=32, frame_h=32,
+            self._add_sheet(f"bossA{n}", f"boss{n}.png", frame_w=32, frame_h=32,
                             cols=3, rows=2)
-            self._add_sheet(f"bossW{n}", f"boss{n}wk.pcx", frame_w=32, frame_h=32,
+            self._add_sheet(f"bossW{n}", f"boss{n}wk.png", frame_w=32, frame_h=32,
                             cols=3, rows=2)
 
     def _load_tilesets(self) -> None:
         for n in (1, 2):
-            self._add_sheet(f"ts{n}", f"tileset{n}.pcx", frame_w=32, frame_h=32,
+            self._add_sheet(f"ts{n}", f"tileset{n}.png", frame_w=32, frame_h=32,
                             cols=10, rows=2)
 
     def _load_backgrounds(self) -> None:
-        self._add_full("menu1", "menu1.pcx")
-        self._add_full("menu2", "menu2.pcx")
-        self._add_full("menu3", "menu3.pcx")
-        self._add_full("menu4", "menu4.pcx")
-        self._add_full("final", "final.pcx")
+        self._add_full("menu1", "menu1.png")
+        self._add_full("menu2", "menu2.png")
+        self._add_full("menu3", "menu3.png")
+        self._add_full("menu4", "menu4.png")
+        self._add_full("final", "final.png")
 
     # -- font ------------------------------------------------------------
 
@@ -188,7 +151,8 @@ class Assets:
                         j = base + x * 4
                         data[j] = data[j + 1] = data[j + 2] = 255
                         data[j + 3] = 255
-            tex = self._make_tex(8, 8, bytes(data))
+            im = pyglet.image.ImageData(8, 8, "RGBA", bytes(data), pitch=8 * 4)
+            tex = self._finalize(im)
             self._glyph_tex[code] = tex
         return tex
 

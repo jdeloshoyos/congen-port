@@ -25,8 +25,8 @@ the environment in sync. No global install is required.
 uv run python run.py
 # equivalent console entry point
 uv run congen2
-# or point at the legacy data explicitly
-uv run python run.py --data legacy_app/Cg2data
+# or point at a custom data folder explicitly
+uv run python run.py --data data
 ```
 
 The game opens in a 960×600 window (3× integer scale of the original 320×200
@@ -50,12 +50,13 @@ All gameplay keys are remappable from **Pause → Controles**; bindings persist.
 
 ## What is faithful
 
-- **320×200, 256 colours**, colour 0 transparent, one shared palette extracted
-  from the original art.
+- **320×200, 256 colours**, colour 0 transparent, the original palette preserved
+  in `data/palette.pal`.
 - **50 Hz fixed simulation** — every velocity, AI routine, event frame and
   spawn table is carried over verbatim.
-- Original **PCX art, WAV audio, `HITECH.FNT` bitmap font**, `.CMP` maps and
-  `.DAT` event scripts are consumed as-is from `legacy_app/Cg2data`.
+- The original art is **losslessly converted to RGBA PNG** under `data/`; WAV
+  audio, the `HITECH.FNT` font, `.CMP` maps and `.DAT` event scripts are carried
+  over unchanged.
 - Menu, level flow, boss sequence, power-ups, scoring, cheats and HUD match the
   original.
 
@@ -76,20 +77,31 @@ All gameplay keys are remappable from **Pause → Controles**; bindings persist.
 
 ```
 legacy_app/            untouched original game + assets (reference)
+data/                  ported runtime assets (RGBA PNG + audio/font/maps)
 specs/                 behaviour/format specifications
 src/congen2/
   constants.py         all tuning values from CONGEN2.BAS
-  dataformats.py       pure decoders: PCX, FNT, CMP, DAT, savegame
+  dataformats.py       pure decoders: FNT, CMP, DAT, savegame (+ PCX for converter)
+  png.py               pure-Python RGBA PNG encode/decode
   world.py             deterministic simulation (player/enemies/AI/boss/…)
-  assets.py            pyglet textures, glyph atlas, sounds
+  assets.py            pyglet PNG textures, glyph textures, sounds
   render.py            layered rendering, background scroll, HUD, menus
   audio.py             SFX pool + music
   config.py            user settings + save-game persistence
   app.py               window, fixed-timestep loop, state machine, input
 run.py                 entry point
-tools/                 screenshot / smoke / flow-test helpers
+tools/                 screenshot / smoke / flow / asset-converter helpers
 tests/                 headless unit tests
 ```
+
+Regenerate `data/` from `legacy_app/Cg2data/` at any time with:
+
+```bash
+uv run python tools/convert_assets.py
+```
+
+Packaging with PyInstaller bundles `data/` via `--add-data "data;data"`; the
+runtime resolves it through `sys._MEIPASS` when frozen.
 
 ## Tests
 
