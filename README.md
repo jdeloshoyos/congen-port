@@ -92,8 +92,10 @@ src/congen2/
   audio.py             SFX pool + music
   config.py            user settings + save-game persistence
   app.py               window, fixed-timestep loop, state machine, input
-run.py                 entry point
-tools/                 screenshot / smoke / flow / asset-converter helpers
+entry.py               PyInstaller entry point (frozen app)
+icon.ico               application icon (generated from the ship sprite)
+run.py                 dev entry point
+tools/                 screenshot / smoke / flow / converter / build helpers
 tests/                 headless unit tests
 ```
 
@@ -103,8 +105,23 @@ Regenerate `data/` from `legacy_app/Cg2data/` at any time with:
 uv run python tools/convert_assets.py
 ```
 
-Packaging with PyInstaller bundles `data/` via `--add-data "data;data"`; the
-runtime resolves it through `sys._MEIPASS` when frozen.
+## Packaging (Windows)
+
+Build a standalone folder distribution with PyInstaller:
+
+```bash
+uv sync
+uv run python tools/build.py
+```
+
+This produces `dist/Congen2/` containing `Congen2.exe` plus an `_internal/`
+folder with the Python runtime, pyglet, and the bundled `data/` assets.
+Distribute that folder as-is (e.g. zip it) — no installer required. The frozen
+app resolves `data/` through `sys._MEIPASS`; saves and settings still go to
+`%APPDATA%\Congen2`.
+
+`tools/build.py` generates `icon.ico` from the ship sprite if it is missing;
+regenerate it explicitly with `uv run python tools/make_icon.py`.
 
 ## Tests
 

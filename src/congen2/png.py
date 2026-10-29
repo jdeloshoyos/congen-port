@@ -89,3 +89,39 @@ def silhouette_rgba(indices: bytes) -> bytes:
             out[j] = out[j + 1] = out[j + 2] = 255
             out[j + 3] = 255
     return bytes(out)
+
+
+def nearest_scale(rgba: bytes, sw: int, sh: int, dw: int, dh: int) -> bytes:
+    """Nearest-neighbour resize of top-down RGBA bytes (crisp pixel art)."""
+    out = bytearray(dw * dh * 4)
+    for dy in range(dh):
+        srow = (dy * sh // dh) * sw * 4
+        drow = dy * dw * 4
+        for dx in range(dw):
+            si = srow + (dx * sw // dw) * 4
+            di = drow + dx * 4
+            out[di:di + 4] = rgba[si:si + 4]
+    return bytes(out)
+
+
+def encode_ico(images: list[tuple[int, int, bytes]]) -> bytes:
+    """Wrap RGBA images into a Windows ``.ico`` container.
+
+    ``images`` is a list of ``(width, height, top_down_rgba)``; each is embedded
+    as a PNG (supported by Windows Vista and later).  Sizes of 256 are stored
+    as 0 in the directory, per the ICO spec.
+    """
+    pngs = [encode_rgba_png(w, h, rgba) for (w, h, rgba) in images]
+    count = len(pngs)
+    header = struct.pack("<HHH", 0, 1, count)
+    entries = bytearray()
+    offset = 6 + 16 * count
+    for (w, h, _rgba), png in zip(images, pngs):
+        entries += struct.pack(
+            "<BBBBHHII",
+            0 if w >= 256 else w,
+            0 if h >= 256 else h,
+            0, 0, 1, 32, len(png), offset,
+        )
+        offset += len(png)
+    return header + bytes(entries) + b"".join(pngs)

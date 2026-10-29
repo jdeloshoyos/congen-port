@@ -13,5 +13,10 @@ dependencies = ["pyglet>=2.1"]
 package-dir = { "" = "src" }
 packages = ["congen2"]
 
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.22.3",
+]
+
 [project.scripts]
 congen2 = "congen2.app:main"
