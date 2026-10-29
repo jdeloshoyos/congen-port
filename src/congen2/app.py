@@ -8,6 +8,7 @@ import pyglet
 from pyglet import display
 from pyglet.window import key
 
+from . import __version__
 from . import constants as C
 from .assets import Assets
 from .audio import Audio
@@ -48,7 +49,8 @@ class App(pyglet.window.Window):
         win_scale = self._windowed_scale()
         w = C.SCREEN_W * win_scale
         h = C.SCREEN_H * win_scale
-        super().__init__(width=w, height=h, caption="Congeneration 2",
+        super().__init__(width=w, height=h,
+                         caption=f"Congeneration 2 v{__version__}",
                          resizable=True, vsync=True)
         self.set_minimum_size(C.SCREEN_W // 2, C.SCREEN_H // 2)
 

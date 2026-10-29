@@ -13,11 +13,13 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from congen2 import __version__  # noqa: E402
 from congen2.png import decode_rgba_png, encode_ico, nearest_scale  # noqa: E402
 
 ICON_SIZES = (16, 32, 48, 64, 128, 256)
@@ -35,24 +37,66 @@ def ensure_icon() -> Path:
     return icon
 
 
+def write_version_file(version: str, dest: Path) -> Path:
+    """Write a PyInstaller VSVersionInfo resource for the executable."""
+    parts = [int(p) for p in version.split(".")[:3]]
+    while len(parts) < 3:
+        parts.append(0)
+    filevers = f"({parts[0]}, {parts[1]}, {parts[2]}, 0)"
+    dest.write_text(
+        f"""VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers={filevers},
+    prodvers={filevers},
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '040904B0',
+        [StringStruct('CompanyName', 'Congeneration 2'),
+         StringStruct('FileDescription', 'Congeneration 2'),
+         StringStruct('FileVersion', '{version}'),
+         StringStruct('InternalName', 'Congen2'),
+         StringStruct('OriginalFilename', 'Congen2.exe'),
+         StringStruct('ProductName', 'Congeneration 2'),
+         StringStruct('ProductVersion', '{version}')])
+    ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)
+""",
+        encoding="utf-8",
+    )
+    return dest
+
+
 def main() -> None:
     icon = ensure_icon()
     data = ROOT / "data"
-    cmd = [
-        sys.executable, "-m", "PyInstaller",
-        "--noconfirm", "--clean",
-        "--onedir", "--windowed",
-        "--name", "Congen2",
-        "--icon", str(icon),
-        "--add-data", f"{data}{os.pathsep}data",
-        "--paths", str(ROOT / "src"),
-        "--distpath", str(ROOT / "dist"),
-        "--workpath", str(ROOT / "build"),
-        "--specpath", str(ROOT / "build"),
-        str(ROOT / "entry.py"),
-    ]
-    print("running:", " ".join(cmd))
-    subprocess.run(cmd, check=True)
+    with tempfile.TemporaryDirectory(prefix="congen2-build-") as td:
+        version_file = write_version_file(__version__, Path(td) / "version_info.txt")
+        cmd = [
+            sys.executable, "-m", "PyInstaller",
+            "--noconfirm", "--clean",
+            "--onedir", "--windowed",
+            "--name", "Congen2",
+            "--icon", str(icon),
+            "--version-file", str(version_file),
+            "--add-data", f"{data}{os.pathsep}data",
+            "--paths", str(ROOT / "src"),
+            "--distpath", str(ROOT / "dist"),
+            "--workpath", str(ROOT / "build"),
+            "--specpath", str(ROOT / "build"),
+            str(ROOT / "entry.py"),
+        ]
+        print("running:", " ".join(cmd))
+        subprocess.run(cmd, check=True)
     print("built:", ROOT / "dist" / "Congen2" / "Congen2.exe")
 
 

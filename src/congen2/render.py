@@ -12,6 +12,7 @@ from typing import Optional
 import pyglet
 from pyglet import gl
 
+from . import __version__
 from . import constants as C
 from .assets import Assets
 from .dataformats import MAP_COLS
@@ -383,6 +384,12 @@ class Renderer:
 
     # -- menus -----------------------------------------------------------
 
+    def _draw_version(self, layer: int) -> None:
+        """Right-aligned version label in the bottom-right corner."""
+        s = f"v{__version__}"
+        x = C.SCREEN_W - 8 * len(s) - 2
+        self.text(layer, s, x, C.SCREEN_H - 8, C.COL_MENU_TEXT)
+
     def draw_menu(self, menuopt: int, mapnumber: int, maxscore: int,
                   cursorframe: int) -> None:
         panel = f"menu{menuopt + 1}"
@@ -399,6 +406,7 @@ class Renderer:
         self.sprite(L_MENU_CURSOR, f"malo2_{f}", 140, (menuopt - 1) * 40 + 48)
         self.text(L_MENU_TOP, _qstr(mapnumber), 180, 108, C.COL_MENU_LEVEL)
         self.text(L_MENU_TOP, "Maximo puntaje:", 10, 191, C.COL_MENU_SCORE_LABEL)
+        self._draw_version(L_MENU_TOP)
 
     def draw_controls(self, cfg, cursor: int, awaiting: str | None) -> None:
         self.rect(L_PAUSE_DIM, 0, 0, C.SCREEN_W, C.SCREEN_H, (0, 0, 0), 180)
@@ -443,3 +451,4 @@ class Renderer:
         for i, opt in enumerate(opts):
             col = 60 if i == cursor else 125
             self.text(L_PAUSE_TEXT, opt, 110, 70 + i * 16, col)
+        self._draw_version(L_PAUSE_TEXT)

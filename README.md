@@ -150,3 +150,4 @@ The reverse-engineered behaviour and formats are documented in `specs/`:
 5. `05-rendering.md`
 6. `06-input.md`
 7. `07-enhancements.md`
+8. `08-versioning.md`

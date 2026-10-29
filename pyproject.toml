@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "congen2"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A faithful Python/pyglet port of Congeneration 2"
 requires-python = ">=3.11"
 dependencies = ["pyglet>=2.1"]
@@ -12,6 +12,9 @@ dependencies = ["pyglet>=2.1"]
 [tool.setuptools]
 package-dir = { "" = "src" }
 packages = ["congen2"]
+
+[tool.setuptools.dynamic]
+version = { attr = "congen2.__version__" }
 
 [dependency-groups]
 dev = [
