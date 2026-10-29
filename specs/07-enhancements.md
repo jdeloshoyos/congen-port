@@ -21,7 +21,8 @@ original behaviour exactly.
   sizing.
 - Integer scaling with letterboxing; no blurry non-integer stretch.
 - `F11` toggles fullscreen, using the largest integer scale that fits.
-- Optional: nearest-neighbour filtering to keep pixel art crisp.
+- Textures are point-sampled (**nearest-neighbour**), so scaled pixels stay
+  crisp and square (no bilinear blur).
 
 ## 3. Music
 

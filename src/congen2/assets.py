@@ -17,6 +17,14 @@ from pyglet import gl
 from . import dataformats as df
 from .config import data_dir
 
+# pyglet's sprite path binds textures by id and never re-applies the sampler
+# filter, so a per-texture ``mag_filter`` assignment never reaches OpenGL.
+# Setting the class defaults (used by ``Texture.create``) before any texture
+# is created makes every texture point-sampled: crisp, square pixels rather
+# than bilinear blur.
+pyglet.image.Texture.default_min_filter = gl.GL_NEAREST
+pyglet.image.Texture.default_mag_filter = gl.GL_NEAREST
+
 # Sound id -> filename (original load order, 1..14)
 SOUND_FILES = {
     1: "disparo.wav",
@@ -66,9 +74,8 @@ class Assets:
     # -- texture helpers -------------------------------------------------
 
     def _finalize(self, img: pyglet.image.AbstractImage) -> pyglet.image.Texture:
+        # Filtering is set globally via ``Texture.default_*_filter`` above.
         tex = img.get_texture()
-        tex.min_filter = gl.GL_NEAREST
-        tex.mag_filter = gl.GL_NEAREST
         tex.anchor_x = img.width // 2
         tex.anchor_y = img.height // 2
         return tex

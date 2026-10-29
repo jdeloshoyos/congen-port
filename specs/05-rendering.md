@@ -5,7 +5,10 @@
 - Simulation and draw commands use the native **320×200** logical space,
   top-left origin, +x right, +y down (matching DirectQB).
 - The logical frame is presented into a window using **integer scaling**
-  (default 3× → 960×600). Non-integer window sizes letterbox with black bars.
+  (auto-selected to the largest fit for the primary screen; `--scale N`
+  overrides). Non-integer window sizes letterbox with black bars.
+- Textures are sampled with **nearest-neighbour (point) filtering**, so scaled
+  pixels are crisp squares rather than bilinear-blurred.
 - Optional fullscreen uses the largest integer scale that fits.
 
 ## 2. Frame composition

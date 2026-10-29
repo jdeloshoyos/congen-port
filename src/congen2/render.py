@@ -101,8 +101,6 @@ class Renderer:
         data = bytes((255, 255, 255, 255))
         im = pyglet.image.ImageData(1, 1, "RGBA", data, pitch=4)
         tex = im.get_texture()
-        tex.min_filter = gl.GL_NEAREST
-        tex.mag_filter = gl.GL_NEAREST
         tex.anchor_x = 0
         tex.anchor_y = 0
         self.assets.textures["pixel"] = tex
