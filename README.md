@@ -25,12 +25,14 @@ the environment in sync. No global install is required.
 uv run python run.py
 # equivalent console entry point
 uv run congen2
-# or point at a custom data folder explicitly
-uv run python run.py --data data
+# point at a custom data folder, or force a fixed window scale
+uv run python run.py --data data --scale 5
 ```
 
-The game opens in a 960×600 window (3× integer scale of the original 320×200
-frame). `F11` toggles fullscreen.
+On launch the window is sized to the largest integer scale of the original
+320×200 frame that fits your primary screen (and centred on it); `F11` toggles
+fullscreen. Use `--scale N` to force a fixed scale, or `--auto-scale` to return
+to automatic sizing.
 
 ### Controls
 
@@ -64,7 +66,8 @@ All gameplay keys are remappable from **Pause → Controles**; bindings persist.
 
 - **Adaptive rendering up to 120 FPS** with interpolation; simulation stays at
   50 Hz.
-- Integer-scaled window + optional fullscreen.
+- Windowed launch auto-selects the largest integer scale that fits the screen
+  (manual `--scale` override); integer-scaled window + optional fullscreen.
 - **Optional background music** (`CANCION1.WAV`, unused in the original) with
   an on/off toggle.
 - SFX on/off, configurable controls, and a proper pause menu.

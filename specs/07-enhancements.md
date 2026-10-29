@@ -12,7 +12,13 @@ original behaviour exactly.
 
 ## 2. Window & display
 
-- Default window 960×600 (3× integer scale of 320×200).
+- On **windowed** launch the window is sized to the **largest integer scale**
+  (of the 320×200 frame) that fits the **primary screen**, reserving a
+  conservative margin for the titlebar, borders and taskbar, and is **centred**
+  on that screen. On a 2880×1800 display this yields 8× (2560×1600).
+- A manual override is available: `config.scale` / `--scale N` force a fixed
+  scale; `config.auto_scale` (default on) / `--auto-scale` restore automatic
+  sizing.
 - Integer scaling with letterboxing; no blurry non-integer stretch.
 - `F11` toggles fullscreen, using the largest integer scale that fits.
 - Optional: nearest-neighbour filtering to keep pixel art crisp.

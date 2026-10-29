@@ -17,8 +17,22 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
 from .dataformats import SaveGame, load_savegame, save_savegame
+from .constants import SCREEN_W, SCREEN_H
 
 APP_NAME = "Congen2"
+
+# Reserved screen space (pixels) when auto-sizing the windowed window:
+# titlebar + window borders + taskbar + a little slack.
+WINDOW_MARGIN_W = 40
+WINDOW_MARGIN_H = 120
+
+
+def compute_windowed_scale(screen_w: int, screen_h: int,
+                           margin_w: int = WINDOW_MARGIN_W,
+                           margin_h: int = WINDOW_MARGIN_H) -> int:
+    """Largest integer scale whose 320x200 client area fits the screen."""
+    return max(1, min((screen_w - margin_w) // SCREEN_W,
+                      (screen_h - margin_h) // SCREEN_H))
 
 
 def user_data_dir() -> Path:
@@ -55,6 +69,7 @@ class Config:
     music_volume: float = 0.5
     sfx_volume: float = 0.7
     fullscreen: bool = False
+    auto_scale: bool = True
     scale: int = 3
     difficulty: str = "normal"
     bindings: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_BINDINGS))

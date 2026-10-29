@@ -5,12 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import pyglet
+from pyglet import display
 from pyglet.window import key
 
 from . import constants as C
 from .assets import Assets
 from .audio import Audio
-from .config import Config, load_save, persist_save, data_dir
+from .config import (Config, compute_windowed_scale, data_dir, load_save,
+                     persist_save)
 from .dataformats import SaveGame, load_cmp, load_dat
 from .render import Renderer
 from .world import Controls, Player, World
@@ -20,11 +22,32 @@ LEVEL = "level"
 CREDITS = "credits"
 
 
+def _primary_screen():
+    """Return the primary screen, or None when no display is available."""
+    try:
+        screens = display.get_display().get_screens()
+        return screens[0] if screens else None
+    except Exception:
+        return None
+
+
 class App(pyglet.window.Window):
-    def __init__(self, data_directory: str | Path | None = None):
+    def __init__(self, data_directory: str | Path | None = None,
+                 scale: int | None = None,
+                 auto_scale: bool | None = None):
         self.cfg = Config.load()
-        w = C.SCREEN_W * max(1, self.cfg.scale)
-        h = C.SCREEN_H * max(1, self.cfg.scale)
+        if scale is not None:
+            self.cfg.auto_scale = False
+            self.cfg.scale = max(1, int(scale))
+            self.cfg.save()
+        elif auto_scale:
+            self.cfg.auto_scale = True
+            self.cfg.save()
+
+        self._primary = _primary_screen()
+        win_scale = self._windowed_scale()
+        w = C.SCREEN_W * win_scale
+        h = C.SCREEN_H * win_scale
         super().__init__(width=w, height=h, caption="Congeneration 2",
                          resizable=True, vsync=True)
         self.set_minimum_size(C.SCREEN_W // 2, C.SCREEN_H // 2)
@@ -57,6 +80,8 @@ class App(pyglet.window.Window):
 
         if self.cfg.fullscreen:
             self.set_fullscreen(True)
+        else:
+            self._center_on_screen()
         self._layout()
         self.audio.refresh_music()
         pyglet.clock.schedule_interval(self._advance, 1 / 240.0)
@@ -402,6 +427,21 @@ class App(pyglet.window.Window):
         super().on_resize(width, height)
         self._layout()
 
+    def _windowed_scale(self) -> int:
+        """Integer scale for the initial windowed size (auto or manual)."""
+        if (self.cfg.auto_scale and not self.cfg.fullscreen
+                and self._primary is not None):
+            return compute_windowed_scale(self._primary.width,
+                                          self._primary.height)
+        return max(1, self.cfg.scale)
+
+    def _center_on_screen(self) -> None:
+        if self._primary is None:
+            return
+        s = self._primary
+        self.set_location(s.x + (s.width - self.width) // 2,
+                          s.y + (s.height - self.height) // 2)
+
     def _layout(self) -> None:
         s = min(self.width // C.SCREEN_W, self.height // C.SCREEN_H)
         s = max(1, s)
@@ -442,7 +482,13 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Congeneration 2 (port)")
     parser.add_argument("--data", default=None,
-                        help="directory containing the original CG2 data files")
+                        help="directory containing the game data files")
+    parser.add_argument("--scale", type=int, default=None,
+                        help="force a fixed integer window scale "
+                             "(disables automatic scaling)")
+    parser.add_argument("--auto-scale", action="store_true",
+                        help="re-enable automatic windowed scaling")
     args, _ = parser.parse_known_args()
-    App(data_directory=args.data)
+    App(data_directory=args.data, scale=args.scale,
+        auto_scale=args.auto_scale)
     pyglet.app.run(interval=1.0 / C.MAX_FPS)
